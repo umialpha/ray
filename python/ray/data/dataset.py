@@ -49,6 +49,7 @@ logger = logging.getLogger(__name__)
 class Dataset(Generic[T]):
     """Implements a distributed Arrow dataset.
 
+
     Datasets are implemented as a list of ``ObjectRef[Block]``. The block
     also determines the unit of parallelism. The default block type is the
     ``pyarrow.Table``. Tensor objects are held in ``np.ndarray`` blocks,
@@ -327,6 +328,7 @@ class Dataset(Generic[T]):
                        *,
                        seed: Optional[int] = None,
                        placement_group=None,
+                       node_resources=None,
                        num_blocks: Optional[int] = None) -> "Dataset[T]":
         """Randomly shuffle the elements of this dataset.
 
@@ -356,6 +358,7 @@ class Dataset(Generic[T]):
             num_blocks,
             random_shuffle=True,
             placement_group=placement_group,
+            node_resources=node_resources,
             random_seed=seed)
         return Dataset(new_blocks)
 

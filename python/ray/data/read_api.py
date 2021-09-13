@@ -136,6 +136,7 @@ def read_datasource(datasource: Datasource[T],
                     parallelism: int = 200,
                     ray_remote_args: Dict[str, Any] = None,
                     placement_group=None,
+                    node_resources=None,
                     **read_args) -> Dataset[T]:
     """Read a dataset from a custom data source.
 
@@ -167,9 +168,12 @@ def read_datasource(datasource: Datasource[T],
     calls: List[Callable[[], ObjectRef[Block]]] = []
     metadata: List[BlockMetadata] = []
 
-    for task in read_tasks:
+    for i, task in enumerate(read_tasks):
+        resources = dict()
+        if node_resources:
+            resources[node_resources[i % len(node_resources)]] = 0.001
         calls.append(
-            lambda task=task: remote_read.options(placement_group=placement_group).remote(task)
+            lambda task=task, resources=resources: remote_read.options(placement_group=placement_group, resources=resources).remote(task)
         )
         metadata.append(task.get_metadata())
 
@@ -201,6 +205,7 @@ def read_parquet(paths: Union[str, List[str]],
                  _tensor_column_schema: Optional[Dict[str, Tuple[
                      np.dtype, Tuple[int, ...]]]] = None,
                  placement_group=None,
+                 node_resources=None,
                  **arrow_parquet_args) -> Dataset[ArrowRow]:
     """Create an Arrow dataset from parquet files.
 
@@ -262,6 +267,7 @@ def read_parquet(paths: Union[str, List[str]],
         columns=columns,
         ray_remote_args=ray_remote_args,
         placement_group=placement_group,
+        node_resources=node_resources,
         **arrow_parquet_args)
 
 

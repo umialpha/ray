@@ -18,18 +18,27 @@ def simple_shuffle(input_blocks: BlockList[T],
                    *,
                    random_shuffle: bool = False,
                    placement_group=None,
+                   node_resources=None,
                    random_seed: Optional[int] = None) -> BlockList[T]:
     input_num_blocks = len(input_blocks)
 
-    shuffle_map = cached_remote_fn(_shuffle_map).options(
-        num_returns=output_num_blocks)
+    shuffle_map = cached_remote_fn(_shuffle_map, num_returns=output_num_blocks)
     shuffle_reduce = cached_remote_fn(_shuffle_reduce, num_returns=2)
 
     map_bar = ProgressBar("Shuffle Map", position=0, total=input_num_blocks)
 
+    def get_resources(i):
+        resources = dict()
+        if node_resources:
+            resources[node_resources[i % len(node_resources)]] = 0.001
+        return resources
+
     shuffle_map_out = [
-        shuffle_map.remote(block, i, output_num_blocks, random_shuffle,
-                           random_seed) for i, block in enumerate(input_blocks)
+        shuffle_map.options(
+            placement_group=placement_group,
+            resources=get_resources(i)).remote(block, i, output_num_blocks,
+                                               random_shuffle, random_seed)
+        for i, block in enumerate(input_blocks)
     ]
     del input_blocks
     if output_num_blocks == 1:
@@ -46,8 +55,10 @@ def simple_shuffle(input_blocks: BlockList[T],
     reduce_bar = ProgressBar(
         "Shuffle Reduce", position=0, total=output_num_blocks)
     shuffle_reduce_out = [
-        shuffle_reduce.options(placement_group=placement_group).remote(
-            *[shuffle_map_out[i][j] for i in range(input_num_blocks)])
+        shuffle_reduce.options(
+            placement_group=placement_group,
+            resources=get_resources(j)).remote(
+                *[shuffle_map_out[i][j] for i in range(input_num_blocks)])
         for j in range(output_num_blocks)
     ]
     del shuffle_map_out
