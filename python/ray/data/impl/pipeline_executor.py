@@ -86,12 +86,14 @@ class PipelineExecutor:
 
 @ray.remote
 class PipelineSplitExecutorCoordinator:
-    def __init__(self, pipeline: "DatasetPipeline[T]", n: int,
+    def __init__(self, n: int,
                  splitter: Callable[[Dataset], "DatasetPipeline[T]"]):
-        self.executor = PipelineExecutor(pipeline)
         self.n = n
         self.splitter = splitter
         self.cur_splits = [None] * self.n
+
+    def set_executor(self, pipeline: "DatasetPipeline[T]"):
+        self.executor = PipelineExecutor(pipeline)
 
     def next_dataset_if_ready(self, split_index: int) -> Optional[Dataset[T]]:
         # Pull the next dataset once all splits are fully consumed.

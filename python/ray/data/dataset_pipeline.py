@@ -192,7 +192,9 @@ class DatasetPipeline(Generic[T]):
                splitter: Callable[[Dataset], "DatasetPipeline[T]"]):
 
         coordinator = PipelineSplitExecutorCoordinator.remote(
-            self, n, splitter)
+            n, splitter)
+        # Ref counting doesn't capture pass by Actor's contructor
+        ray.get(coordinator.set_executor.remote(self))
 
         class SplitIterator:
             def __init__(self, split_index, coordinator):
