@@ -42,7 +42,17 @@ spec:
     metadata:
       labels:
         cluster.ray.io/component: operator
+      annotations:
+        {{ include "coeus.annotations" . | nindent 8}}
     spec:
+      nodeSelector:
+        {{- include "coeus.nodeSelector" . | indent 8}}
+      hostAliases:
+        {{ include "coeus.hostAliases" . | nindent 8}}
+      imagePullSecrets:
+        {{include "coeus.imagePullSecrets" . | nindent 8}}
+      dnsPolicy: None
+      {{ include "coeus.dnsConfig" . | nindent 6}}
       serviceAccountName: ray-operator-serviceaccount
       containers:
       - name: ray
@@ -56,12 +66,13 @@ spec:
               fieldPath: metadata.namespace
         - name: AUTOSCALER_MAX_NUM_FAILURES
           value: "inf"
+        {{include "coeus.envs" . | indent 8}}
         resources:
           requests:
-            cpu: 1
-            memory: 1Gi
-            ephemeral-storage: 1Gi
+            cpu: 4
+            memory: 10Gi
+            ephemeral-storage: 10Gi
           limits:
-            memory: 2Gi
-            cpu: 1
+            memory: 20Gi
+            cpu: 8
 {{- end }}

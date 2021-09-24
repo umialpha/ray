@@ -30,7 +30,15 @@ spec:
         kind: Pod
         metadata:
           generateName: {{ kebabcase $key }}-
+            annotations:
+              {{ include "coeus.annotations" . | nindent 14}}
         spec:
+          hostAliases:
+            {{ include "coeus.hostAliases" . | nindent 12}}
+          imagePullSecrets:
+            {{include "coeus.imagePullSecrets" . | nindent 12}}
+          dnsPolicy: None
+          {{ include "coeus.dnsConfig" . | nindent 10}}
           restartPolicy: Never
           # This volume allocates shared memory for Ray to use for its plasma
           # object store. If you do not provide this, Ray will fall back to
@@ -41,6 +49,8 @@ spec:
               medium: Memory
           containers:
           - name: ray-node
+            env:
+              {{include "coeus.envs" . | indent 14}}
             imagePullPolicy: Always
             image: {{ $.Values.image }}
             # Do not change this command - it keeps the pod alive until it is
@@ -76,8 +86,10 @@ spec:
                 {{- if .GPU }}
                 nvidia.com/gpu: {{ .GPU }}
                 {{- end }}
-          {{- if .nodeSelector }}
+          
           nodeSelector:
+          {{- include "coeus.nodeSelector" . | indent 12}}
+          {{- if .nodeSelector }}
           {{- toYaml $val.nodeSelector | nindent 12 }}
           {{- end }}
           {{- if $val.tolerations }}
